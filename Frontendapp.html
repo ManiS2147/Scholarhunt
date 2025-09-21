@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Smart Scholarship Finder</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  body { font-family: 'Inter', Arial, sans-serif; background: #f8fafc; margin: 0; padding: 0; color: #222; min-height: 100vh; display: flex; flex-direction: column;}
+  .navbar {background: #fff; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.01); flex-wrap: wrap; gap: 12px;}
+  .navbar-logo {font-size: 1.5rem; font-weight: 700; color: #2563eb; cursor: pointer; transition: color 0.3s ease; user-select: none;}
+  .navbar-logo:hover {color: #1d4ed8;}
+  .navbar-links, .navbar-controls {display: flex; align-items: center; gap: 20px;}
+  .navbar-links button {background: none; border: none; color: #222; font-size: 1rem; cursor: pointer; transition: color 0.3s ease; padding: 8px 12px; border-radius: 8px;}
+  .navbar-links button.active, .navbar-links button:hover {color: #2563eb; background: #e0e7ff;}
+  select {padding: 6px 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem; cursor: pointer;}
+  .content {flex: 1 0 auto; max-width: 960px; margin: 24px auto 40px auto; width: 95%;}
+  .section {display: none; animation: fadeIn 0.5s ease forwards;}
+  .section.active {display: block;}
+  .search-bar {display: flex; gap: 12px; max-width: 700px; margin: 0 auto 32px; background: #f1f5f9; border-radius: 36px; padding: 12px 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); align-items: center; justify-content: center; flex-wrap: wrap;}
+  .search-bar input[type=text], .search-bar select {border: none; background: transparent; outline: none; font-size: 1.1rem; padding: 10px 16px; flex: 1 1 150px; min-width: 150px; max-width: 320px;}
+  .search-bar button {background: #2563eb; color: #fff; border: none; border-radius: 36px; padding: 10px 30px; font-size: 1.1rem; cursor: pointer; transition: background 0.3s ease; flex: 1 1 120px; min-width: 120px; max-width: 150px;}
+  .search-bar button:hover {background: #1d4ed8;}
+  .cards-section {display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: 28px; padding: 0 10px;}
+  .scholarship-card {background: #fff; border-radius: 12px; padding: 22px; box-shadow: 0 3px 15px rgba(0,0,0,0.06); text-align: left; border: 1px solid #e5e7eb; transition: transform 0.3s ease, box-shadow 0.3s ease; cursor: pointer; position: relative;}
+  .scholarship-card:hover {transform: translateY(-6px); box-shadow: 0 8px 24px rgba(0,0,0,0.1);}
+  .scholarship-card h3 {font-size: 1.4rem; margin: 0 0 8px 0; color: #2563eb; font-weight: 700;}
+  .scholarship-card p {font-size: 1rem; color: #48516c; flex-grow: 1; margin-bottom: 14px; line-height: 1.4;}
+  .scholarship-meta {display: flex; justify-content: space-between; font-size: 0.94rem; color: #6b7280; font-weight: 600;}
+  .center-text {text-align: center; color: #666; margin-top: 40px;}
+  .fav-btn, .alert-btn, .apply-btn {
+    background: transparent; border: none; cursor: pointer; transition: color 0.3s ease; position: absolute;
+  }
+  .fav-btn { bottom: 16px; left: 16px; font-size: 1.5rem; color: #999; }
+  .fav-btn.favorited { color: #ef4444; }
+  .fav-btn:focus { outline: 2px solid #2563eb; outline-offset: 2px; }
+  .alert-btn { bottom: 16px; right: 16px; font-size: 1.3rem; color: #556; }
+  .alert-btn:hover {color: #2563eb;}
+  .apply-btn {
+    position: relative;
+    margin: 12px auto 0 auto;
+    display: block;
+    background: #e0e7ff;
+    color: #2563eb;
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 20px;
+    padding: 6px 20px;
+    cursor: pointer;
+    border: none;
+    text-align: center;
+    width: fit-content;
+  }
+  .apply-btn[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  /* Profile & login modals */
+  #profile-modal, #login-modal {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom:0;
+    background: rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center; padding: 20px;
+  }
+  #profile-modal.active, #login-modal.active { display: flex;}
+  #profile-modal-content, #login-modal-content {
+    background: white; border-radius: 12px; max-width: 500px; width: 100%; padding: 24px; box-shadow: 0 3px 15px rgba(0,0,0,0.2); position:relative;
+  }
+  #login-modal-content { max-width:400px; padding: 20px; }
+  #profile-modal-content h2, #login-modal-content h2 { margin-top: 0; color: #2563eb; font-weight: 700; }
+  #profile-form, #login-form { display: flex; flex-direction: column; gap: 16px; }
+  #login-form { gap: 12px; }
+  #profile-form label, #login-form label { font-weight: 600; color: #444; margin-bottom: 6px; }
+  #profile-form input, #login-form input {
+    padding:10px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; width: 100%; box-sizing: border-box;
+  }
+  #profile-form button, #login-form button {
+    background: #2563eb; color: white; border: none; border-radius: 36px; padding: 12px 20px; font-size: 1.1rem; cursor: pointer;
+    transition: background 0.3s ease; width: fit-content; align-self: flex-start;
+  }
+  #profile-form button:hover, #login-form button:hover { background: #1d4ed8; }
+  .success-message { color: #15803d; font-weight: 600; font-size: 1rem; margin-top: -12px; margin-bottom: 12px; display: none; }
+  #modal-close-btn, #login-modal-close {
+    position: absolute; top: 12px; right: 12px; background: transparent; border:none; font-size: 1.5rem; cursor: pointer; color: #999;
+    transition: color 0.3s ease;
+  }
+  #modal-close-btn:hover, #modal-close-btn:focus, #login-modal-close:hover, #login-modal-close:focus { color: #2563eb; outline: none;}
+  #login-error-msg { color: red; margin-top: 10px; display:none; }
+  @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
+  @media (max-width:600px) { .navbar { flex-direction: column; align-items: flex-start; } .navbar-links { flex-wrap: wrap; gap: 10px; } }
+</style>
+</head>
+<body>
+<nav class="navbar" role="navigation" aria-label="Main navigation">
+  <span class="navbar-logo" tabindex="0" onclick="switchPage('dashboard')">Scholarship Finder</span>
+  <div class="navbar-links" role="menubar" aria-label="Primary">
+    <button role="menuitem" class="nav-btn active" onclick="switchPage('dashboard')">Dashboard</button>
+    <button role="menuitem" class="nav-btn" onclick="switchPage('scholarships')">Scholarships</button>
+    <button role="menuitem" class="nav-btn" onclick="switchPage('applications')">Applications</button>
+    <button role="menuitem" class="nav-btn" onclick="switchPage('favorites')">Favorites</button>
+    <button role="menuitem" class="nav-btn" id="profile-btn">Profile</button>
+  </div>
+  <div class="navbar-controls" aria-label="Language and region">
+    <label for="language-select" class="sr-only">Language</label>
+    <select id="language-select" aria-label="Select language" onchange="changeLanguage()">
+      <option value="en" selected>English</option>
+      <option value="hi">हिन्दी</option>
+      <option value="mr">मराठी</option>
+    </select>
+    <label for="region-select" class="sr-only">Region</label>
+    <select id="region-select" aria-label="Select region">
+      <option value="all">All India</option>
+      <option value="mumbai">Mumbai</option>
+      <option value="pune">Pune</option>
+      <option value="nashik">Nashik</option>
+      <option value="nagpur">Nagpur</option>
+    </select>
+  </div>
+</nav>
+
+<main class="content" id="dashboard-section">
+  <h1 id="welcome-title">Find the Right Scholarship in Seconds</h1>
+  <p id="welcome-desc">Search, explore, and apply to scholarships that are the best fit for you. Easy. Fast. Personalized.</p>
+  <form class="search-bar" id="search-form" onsubmit="submitSearch(event)" aria-label="Search scholarships form">
+    <input type="text" id="search-input" placeholder="Search scholarships..." aria-label="Search term" />
+    <select id="category-select" aria-label="Select category">
+      <option value="all">All Categories</option>
+      <option value="science">SCIENCE</option>
+      <option value="general">GENERAL</option>
+      <option value="stem">STEM</option>
+      <option value="sports">SPORT</option>
+      <option value="women">WOMEN</option>
+      <option value="merit">MERIT</option>
+    </select>
+    <button type="submit">Search</button>
+  </form>
+  <section class="cards-section" id="cards-container" aria-live="polite" aria-label="Scholarship results"></section>
+</main>
+
+<section class="content section" id="scholarships-section" aria-label="Scholarships list"></section>
+
+<section class="content section" id="applications-section" aria-label="Applications">
+  <h2>Your Applications</h2>
+  <div id="applications-list" class="cards-section center-text">No applications yet.</div>
+</section>
+
+<section class="content section" id="favorites-section" aria-label="Favorites">
+  <h2>Your Favorites</h2>
+  <div class="cards-section" id="favorites-list">
+    <p class="center-text" id="no-favorites-msg">No favorites yet.</p>
+  </div>
+</section>
+
+<!-- Profile modal -->
+<div id="profile-modal" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title" tabindex="-1">
+  <div id="profile-modal-content">
+    <button id="modal-close-btn" aria-label="Close profile form">&times;</button>
+    <h2 id="profile-modal-title">Profile Settings</h2>
+    <form id="profile-form" aria-label="User profile form">
+      <label for="name-input">Full Name</label><input type="text" id="name-input" name="name" placeholder="Enter your full name" required />
+      <label for="email-input">Email Address</label><input type="email" id="email-input" name="email" placeholder="Enter your email" required />
+      <label for="phone-input">Phone Number</label><input type="tel" id="phone-input" name="phone" placeholder="Enter your phone number" pattern="[0-9]{10}" title="Enter 10 digit phone number" required />
+      <label for="city-input">City</label><input type="text" id="city-input" name="city" placeholder="Enter your city" />
+      <button type="submit">Save Profile</button>
+      <div id="save-success-msg" class="success-message">Profile saved successfully!</div>
+    </form>
+  </div>
+</div>
+
+<!-- Login modal -->
+<div id="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-modal-title" tabindex="-1">
+  <div id="login-modal-content">
+    <button id="login-modal-close" aria-label="Close login form">&times;</button>
+    <h2 id="login-modal-title">Login</h2>
+    <form id="login-form" aria-label="Login form">
+      <label for="login-email">Email</label><input type="email" id="login-email" required placeholder="Enter your email" />
+      <label for="login-password">Password</label><input type="password" id="login-password" required placeholder="Enter your password" />
+      <button type="submit">Login</button>
+      <p id="login-error-msg"></p>
+    </form>
+  </div>
+</div>
+
+<script>
+  const scholarships = [
+    {id:1,title:"Academic Excellence Award",description:"Top GPAs, science stream",amount:"₹40,000",category:"science",location:"mumbai"},
+    {id:2,title:"Need-Based Scholarship",description:"Low-income support",amount:"₹25,000",category:"general",location:"all"},
+    {id:3,title:"Girls in STEM Scholarship",description:"Support women in tech & science",amount:"₹50,000",category:"stem",location:"pune"},
+    {id:4,title:"Engineering Scholars",description:"For engineering students in Nashik",amount:"₹30,000",category:"science",location:"nashik"},
+    {id:5,title:"Lotus Foundation Scholarship",description:"For M.Com candidates in Mumbai with highest marks aggregate",amount:"₹1,800 per annum",category:"merit-based",location:"Mumbai"},
+    {id:6,title:"Savitribai Phule Scholarship",description:"Scholarships for academically excellent girls facing financial hardships in Mumbai",amount:"Varies",category:"women",location:"Mumbai"},
+    {id:7,title:"Government of India Scholarship",description:"Scholarships for SC/ST/OBC/SBC/DT-NT/VJ category students in Pune for various courses",amount:"Varies",category:"category-based",location:"Pune"},
+    {id:8,title:"Merit Scholarship Policy FY Students",description:"Merit-based scholarships for all programs at a Pune college",amount:"Varies",category:"merit-based",location:"Pune"},
+    {id:9,title:"IIM Nagpur Merit Scholarship",description:"Merit Scholarship for candidates securing 95%ile or above in CAT",amount:"Full tuition fee waiver",category:"merit-based",location:"Nagpur"},
+    {id:10,title:"IIM Nagpur Need-cum-Merit Scholarship",description:"Scholarship for candidates with family income less than Rs 8 lakh",amount:"Full tuition fee waiver",category:"need-merit",location:"Nagpur"},
+    {id:11,title:"Sports Scholarship Scheme",description:"Scholarships for athletes under the Khelo India Scheme and other sports authorities",amount:"Varies depending on level and sport",category:"sports",location:"All locations including Mumbai, Pune, Nashik, Nagpur"},
+    {id:12,title:"Pragati Scholarship",description:"Technical education scholarship for meritorious girl students across India",amount:"₹50,000 per annum",category:"women",location:"Mumbai, Pune, Nashik, Nagpur"},
+    {id:13,title:"Reliance Foundation Undergraduate Scholarship",description:"Merit-cum-means scholarship up to ₹2 lakhs for undergraduate students including girls and specially-abled students",amount:"Up to ₹2,00,000",category:"merit-based, women",location:"Mumbai, Pune, Nashik, Nagpur"},
+    {id:14,title:"R D Sethna Scholarship Fund",description:"Scholarship for outstanding and deserving students in Mumbai",amount:"Varies",category:"merit-based",location:"Mumbai"}
+  ];
+
+  const navButtons = document.querySelectorAll('.nav-btn');
+  const sections = {
+    dashboard: document.getElementById('dashboard-section'),
+    scholarships: document.getElementById('scholarships-section'),
+    applications: document.getElementById('applications-section'),
+    favorites: document.getElementById('favorites-section'),
+  };
+
+  let currentPage = 'dashboard';
+  let favorites = JSON.parse(localStorage.getItem('favoritesList')) || [];
+  let applications = JSON.parse(localStorage.getItem('applicationsList')) || [];
+
+  function rankScholarships(scholarships, userProfile, searchTerm = '', searchCategory = '', searchRegion = '') {
+    const weights = { location: 3, category: 2, term: 1 };
+    const term = searchTerm.toLowerCase();
+    const category = searchCategory.toLowerCase();
+    const region = searchRegion.toLowerCase();
+    const userCity = (userProfile.city || '').toLowerCase();
+
+    return scholarships.map(s => {
+      let score = 0;
+      const locations = s.location.toLowerCase().split(',').map(l => l.trim());
+
+      if (userCity && locations.includes(userCity)) score += weights.location;
+      else if (region !== 'all' && locations.includes(region)) score += weights.location;
+      else if (locations.includes('all')) score += weights.location / 2;
+
+      if (category === 'all' || s.category.toLowerCase().includes(category)) score += weights.category;
+      if (term && (s.title.toLowerCase().includes(term) || s.description.toLowerCase().includes(term))) score += weights.term;
+
+      return { ...s, score };
+    }).sort((a, b) => b.score - a.score);
+  }
+
+  function switchPage(page) {
+    if (page === currentPage) return;
+    Object.values(sections).forEach(s => s.classList.remove('active'));
+    if (sections[page]) sections[page].classList.add('active');
+    navButtons.forEach(btn => btn.classList.remove('active'));
+    [...navButtons].find(btn => btn.textContent.toLowerCase() === page)?.classList.add('active');
+    currentPage = page;
+    if (page === 'scholarships') displayScholarships();
+    if (page === 'applications') displayApplications();
+    if (page === 'favorites') displayFavorites();
+  }
+
+  function displayScholarships(filteredList = null) {
+    const container = currentPage === 'dashboard' ? document.getElementById('cards-container') : document.getElementById('scholarships-list');
+    container.innerHTML = "";
+    const list = filteredList || scholarships;
+    if (!list.length) {
+      container.innerHTML = '<p class="center-text">No scholarships found.</p>';
+      return;
+    }
+    list.forEach(s => {
+      const isFav = favorites.includes(s.id);
+      const isApplied = applications.includes(s.id);
+      const card = document.createElement('article');
+      card.className = 'scholarship-card';
+      card.tabIndex = 0;
+      card.innerHTML = `
+        <a href="/scholarship/${s.id}" style="text-decoration:none; color: inherit;">
+          <h3>${s.title}</h3>
+          <p>${s.description}</p>
+          <div class="scholarship-meta">
+            <span>${s.amount}</span>
+            <span>${capitalize(s.category)}</span>
+          </div>
+        </a>
+        <button class="fav-btn ${isFav ? 'favorited' : ''}" aria-label="${isFav ? 'Remove from favorites' : 'Add to favorites'}" data-id="${s.id}">${isFav ? '♥' : '♡'}</button>
+        <button class="alert-btn" aria-label="Set email and calendar alerts" data-id="${s.id}">📅📧</button>
+        <br />
+        <button class="apply-btn" aria-label="Apply/Unapply scholarship" data-id="${s.id}">
+          ${isApplied ? 'Unapply' : 'Apply'}
+        </button>`;
+      container.appendChild(card);
+    });
+    container.querySelectorAll('.fav-btn').forEach(btn => btn.addEventListener('click', toggleFavorite));
+    container.querySelectorAll('.alert-btn').forEach(btn => btn.addEventListener('click', setAlerts));
+    container.querySelectorAll('.apply-btn').forEach(btn => btn.addEventListener('click', toggleApplication));
+  }
+
+  function displayFavorites() {
+    const container = document.getElementById('favorites-list');
+    container.innerHTML = '';
+    if (!favorites.length) {
+      container.innerHTML = '<p class="center-text" id="no-favorites-msg">No favorites yet.</p>';
+      return;
+    }
+    favorites.forEach(id => {
+      const s = scholarships.find(sc => sc.id === id);
+      if (!s) return;
+      const card = document.createElement('article');
+      card.className = 'scholarship-card';
+      card.tabIndex = 0;
+      card.innerHTML = `
+        <a href="/scholarship/${s.id}" style="text-decoration:none; color: inherit;">
+          <h3>${s.title}</h3>
+          <p>${s.description}</p>
+          <div class="scholarship-meta">
+            <span>${s.amount}</span>
+            <span>${capitalize(s.category)}</span>
+          </div>
+        </a>
+        <button class="fav-btn favorited" aria-label="Remove from favorites" data-id="${s.id}">♥</button>`;
+      container.appendChild(card);
+    });
+    container.querySelectorAll('.fav-btn').forEach(btn => btn.addEventListener('click', e => {
+      const id = parseInt(e.currentTarget.dataset.id);
+      favorites = favorites.filter(favId => favId !== id);
+      localStorage.setItem('favoritesList', JSON.stringify(favorites));
+      displayFavorites();
+      if (currentPage === 'dashboard' || currentPage === 'scholarships') displayScholarships();
+    }));
+  }
+
+  function displayApplications() {
+    const container = document.getElementById('applications-list');
+    container.innerHTML = '';
+    if (!applications.length) {
+      container.textContent = "No applications yet.";
+      container.classList.add('center-text');
+      return;
+    }
+    container.classList.remove('center-text');
+    applications.forEach(id => {
+      const s = scholarships.find(sc => sc.id === id);
+      if (!s) return;
+      const card = document.createElement('article');
+      card.className = 'scholarship-card';
+      card.tabIndex = 0;
+      card.innerHTML = `
+        <a href="/scholarship/${s.id}" style="text-decoration:none; color: inherit;">
+          <h3>${s.title}</h3>
+          <p>${s.description}</p>
+          <div class="scholarship-meta">
+            <span>${s.amount}</span>
+            <span>${capitalize(s.category)}</span>
+          </div>
+        </a>`;
+      container.appendChild(card);
+    });
+  }
+
+  function toggleFavorite(e) {
+    e.stopPropagation();
+    const btn = e.currentTarget;
+    const id = parseInt(btn.dataset.id);
+    const index = favorites.indexOf(id);
+    if (index === -1) {
+      favorites.push(id);
+      btn.classList.add('favorited');
+      btn.textContent = '♥';
+      btn.setAttribute('aria-label', 'Remove from favorites');
+    } else {
+      favorites.splice(index, 1);
+      btn.classList.remove('favorited');
+      btn.textContent = '♡';
+      btn.setAttribute('aria-label', 'Add to favorites');
+    }
+    localStorage.setItem('favoritesList', JSON.stringify(favorites));
+    if (currentPage === 'favorites') displayFavorites();
+  }
+
+  function setAlerts(e) {
+    e.stopPropagation();
+    const id = parseInt(e.currentTarget.dataset.id);
+    const scholarship = scholarships.find(s => s.id === id);
+    if (!scholarship) return;
+    alert(`Alert set for "${scholarship.title}". Email and calendar notifications (simulated).`);
+  }
+
+  function toggleApplication(e) {
+    e.stopPropagation();
+    const btn = e.currentTarget;
+    const id = parseInt(btn.dataset.id);
+    const applied = applications.includes(id);
+
+    if (applied) {
+      if(confirm(`Are you sure you want to unapply for "${scholarships.find(s => s.id === id).title}"?`)) {
+        applications = applications.filter(appId => appId !== id);
+        btn.textContent = 'Apply';
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+        localStorage.setItem('applicationsList', JSON.stringify(applications));
+        displayApplications();
+      }
+    } else {
+      applications.push(id);
+      btn.textContent = 'Unapply';
+      localStorage.setItem('applicationsList', JSON.stringify(applications));
+      displayApplications();
+    }
+  }
+
+  function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  function submitSearch(e) {
+    e.preventDefault();
+    const term = document.getElementById('search-input').value.trim();
+    const category = document.getElementById('category-select').value;
+    const region = document.getElementById('region-select').value;
+    const userProfile = JSON.parse(localStorage.getItem('userProfile')) || {};
+
+    const filtered = scholarships.filter(s => {
+      const matchesTerm = !term || s.title.toLowerCase().includes(term.toLowerCase()) || s.description.toLowerCase().includes(term.toLowerCase());
+      const matchesCategory = category === "all" || s.category.toLowerCase().includes(category.toLowerCase());
+      const matchesRegion = region === "all" || s.location.toLowerCase().includes(region.toLowerCase()) || s.location.toLowerCase() === "all";
+      return matchesTerm && matchesCategory && matchesRegion;
+    });
+
+    const ranked = rankScholarships(filtered, userProfile, term, category, region);
+    displayScholarships(ranked);
+
+    if (currentPage !== 'dashboard') switchPage('dashboard');
+  }
+
+  function changeLanguage() {
+    const lang = document.getElementById('language-select').value;
+    const welcomeTitle = document.getElementById('welcome-title');
+    const welcomeDesc = document.getElementById('welcome-desc');
+    if (lang === 'hi') {
+      welcomeTitle.textContent = 'सेकंडों में सही छात्रवृत्ति खोजें';
+      welcomeDesc.textContent = 'उन छात्रवृत्तियों को खोजें, एक्सप्लोर करें और आवेदन करें जो आपके लिए सबसे उपयुक्त हैं। आसान। तेज़। व्यक्तिगत।';
+    } else if (lang === 'mr') {
+      welcomeTitle.textContent = 'सेकंदांत योग्य शिष्यवृत्ती शोधा';
+      welcomeDesc.textContent = 'आपल्यासाठी सर्वोत्तम शिष्यवृत्त्यांचा शोध घ्या, एक्सप्लोर करा आणि अर्ज करा. सोपे. वेगवान. वैयक्तिकृत.';
+    } else {
+      welcomeTitle.textContent = 'Find the Right Scholarship in Seconds';
+      welcomeDesc.textContent = 'Search, explore, and apply to scholarships that are the best fit for you. Easy. Fast. Personalized.';
+    }
+  }
+
+  const profileModal = document.getElementById('profile-modal');
+  const profileBtn = document.getElementById('profile-btn');
+  const modalCloseBtn = document.getElementById('modal-close-btn');
+  const profileForm = document.getElementById('profile-form');
+  const saveMsg = document.getElementById('save-success-msg');
+
+  profileBtn.addEventListener('click', () => {
+    loginModal.style.display = 'flex';
+  });
+
+  modalCloseBtn.addEventListener('click', () => {
+    profileModal.classList.remove('active');
+    saveMsg.style.display = 'none';
+  });
+
+  profileModal.addEventListener('click', e => {
+    if (e.target === profileModal) {
+      profileModal.classList.remove('active');
+      saveMsg.style.display = 'none';
+    }
+  });
+
+  profileForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const profileData = {
+      name: profileForm.name.value.trim(),
+      email: profileForm.email.value.trim(),
+      phone: profileForm.phone.value.trim(),
+      city: profileForm.city.value.trim(),
+    };
+    localStorage.setItem('userProfile', JSON.stringify(profileData));
+    saveMsg.style.display = 'block';
+    setTimeout(() => saveMsg.style.display = 'none', 3000);
+  });
+
+  function loadProfile() {
+    const saved = localStorage.getItem('userProfile');
+    if (saved) {
+      const data = JSON.parse(saved);
+      profileForm.name.value = data.name || '';
+      profileForm.email.value = data.email || '';
+      profileForm.phone.value = data.phone || '';
+      profileForm.city.value = data.city || '';
+    } else {
+      profileForm.reset();
+    }
+    saveMsg.style.display = 'none';
+  }
+
+  // Login modal and logic
+  const loginModal = document.getElementById('login-modal');
+  const loginCloseBtn = document.getElementById('login-modal-close');
+  const loginForm = document.getElementById('login-form');
+  const loginErrorMsg = document.getElementById('login-error-msg');
+
+  loginCloseBtn.addEventListener('click', () => {
+    loginModal.style.display = 'none';
+    loginErrorMsg.style.display = 'none';
+  });
+
+  loginForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value.trim();
+
+    if (email === 'user@example.com' && password === 'password') {
+      loginModal.style.display = 'none';
+      localStorage.setItem('loggedInUser', JSON.stringify({ email }));
+      alert('Login successful!');
+    } else {
+      loginErrorMsg.textContent = 'Invalid email or password.';
+      loginErrorMsg.style.display = 'block';
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadProfile();
+    switchPage('dashboard');
+    changeLanguage();
+  });
+</script>
+</body>
+</html>
